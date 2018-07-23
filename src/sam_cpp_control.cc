@@ -1,9 +1,10 @@
-#include"sam_ippm.h"
+#include"sam_cpp.h"
 
 sam_opt_contr::sam_opt_contr(){};
 sam_opt_contr::~sam_opt_contr(){};
 
-void sam_opt_contr::setVals( const SEXP &Rmaxit, const SEXP &Rtrace, const SEXP &RnReport, const SEXP &Rabstol, const SEXP &Rreltol, SEXP &Rconv)
+void sam_opt_contr::setVals( const SEXP &Rmaxit, const SEXP &Rtrace, const SEXP &RnReport, const SEXP &Rabstol, 
+const SEXP &Rreltol, SEXP &Rconv,const SEXP &Rprintparams)
 {
 
 	maxitQN = *(INTEGER( Rmaxit));
@@ -12,6 +13,8 @@ void sam_opt_contr::setVals( const SEXP &Rmaxit, const SEXP &Rtrace, const SEXP 
 	abstol = *(REAL(Rabstol));
 	reltol = *(REAL(Rreltol));
 	conv = INTEGER( Rconv);
+	printparams = *INTEGER(Rprintparams);
+
 
 	denomEps = 1e-5;
 }

@@ -1,5 +1,5 @@
-#ifndef sam_ippm_hh
-#define sam_ippm_hh
+#ifndef sam_cpp_hh
+#define sam_cpp_hh
 
 #include<R.h>
 #include<Rmath.h>
@@ -23,7 +23,8 @@ class sam_data {
 	public:
 		sam_data();
 		~sam_data();
-		void setVals( SEXP &Ry, SEXP &RX, SEXP &Roffset, SEXP &Rspp_wts, &Rsite_spp_wts, SEXP &Ry_not_na, SEXP &RS, SEXP &RG, SEXP &Rp, SEXP &RnObs, SEXP &Rdisty, SEXP &optiDisp);
+		void setVals( SEXP &Ry, SEXP &RX, SEXP &Roffset, SEXP &Rspp_wts, SEXP &Rsite_spp_wts, SEXP &Ry_not_na,
+		 SEXP &RS, SEXP &RG, SEXP &Rp, SEXP &RnObs, SEXP &Rdisty, SEXP &RoptiDisp);
 		bool isDispersion() const;
 		bool doOptiDisp() const;
 		void printVals( int printX, int printy);
@@ -41,7 +42,7 @@ class sam_data {
 				*y,	//the outcome matrix, in vector form (nObs x nS)
 				//*W, //the design matix in vector for for the species model (nObs x npw) ** yet to be implemented. 
 				*offset, //the offset vector (length nObs)
-				*spp_wts;  //the wts for the logl dependent on the species - used for the bayesian bootstrap (typically all zero and of length nObs).
+				*spp_wts,  //the wts for the logl dependent on the species - used for the bayesian bootstrap (typically all zero and of length nObs).
 				*site_spp_wts; // the wts for the ippm.
 		int 	*y_not_na; //a matrix which keeps track of NAs in ippm data. If non-ippm model all == 1.
 
@@ -62,7 +63,7 @@ class sam_params {
 				*Beta,	//the habitats' free covariate params (G*xp)
 				*Eta,	//the pis - mmmmm pies.
 				*Disp;  //the dispersion parameter for negative binomial model nspp long.
-		int nalpha, nbeta, npi, ndisp, nTot;
+		int nalpha, nbeta, neta, ndisp, nTot;
 };
 
 
@@ -92,9 +93,9 @@ class sam_opt_contr {
 	public:
 		sam_opt_contr();
 		~sam_opt_contr();
-		void setVals( const SEXP &Rmaxit, const SEXP &Rtrace, const SEXP &RnReport, const SEXP &Rabstol, const SEXP &Rreltol, SEXP &Rconv);
+		void setVals( const SEXP &Rmaxit, const SEXP &Rtrace, const SEXP &RnReport, const SEXP &Rabstol, const SEXP &Rreltol, SEXP &Rconv, const SEXP &Rprintparam);
 
-		int maxitQN, traceQN, nReport, fnKount, grKount, ifail, *conv;
+		int maxitQN, traceQN, nReport, fnKount, grKount, ifail, *conv, printparams;
 		double abstol, reltol, denomEps;
 };
 
@@ -110,6 +111,7 @@ class sam_fits {
 		vector<double> allMus; 	//3D array for the fitted mus (note that indexing must be done with MATREF3D)
 		vector<double> log_like_species_group_contrib; // 2D array of loglikes species and groups.
 		vector<double> log_like_species_contrib; //vector of species logls.
+		vector<double> all_derivs_mu;
 		vector<double> dlogdalpha;
 		vector<double> dlogdbeta;
 		vector<double> dlogdpi;
@@ -139,9 +141,9 @@ class sam_cpp_all_classes
 extern "C" SEXP species_mix_cpp(SEXP Ry, SEXP RX, SEXP Roffset, SEXP Rspp_wts, SEXP Rsite_spp_wts, SEXP Ry_not_na,
 									 SEXP RnS, SEXP RnG, SEXP Rp, SEXP RnObs, SEXP Rdisty,
 									 SEXP Ralpha, SEXP Rbeta, SEXP Reta, SEXP Rdisp,
-									 SEXP RderivsAlpha, SEXP RderivsBeta, SEXP RderivsEta, RderivsDisp, SEXP RgetScores, SEXP Rscores,
+									 SEXP RderivsAlpha, SEXP RderivsBeta, SEXP RderivsEta, SEXP RderivsDisp, SEXP RgetScores, SEXP Rscores,
 									 SEXP Rpis, SEXP Rmus, SEXP logliS, SEXP logliSG,
-									 SEXP Rmaxit, SEXP Rtrace, SEXP RnReport, SEXP Rabstol, SEXP Rreltol, SEXP Rconv,
+									 SEXP Rmaxit, SEXP Rtrace, SEXP RnReport, SEXP Rabstol, SEXP Rreltol, SEXP Rconv, SEXP Rprintparams,
 									 SEXP Roptimise, SEXP RloglOnly, SEXP RderivsOnly, SEXP RoptiDisp);
 
 

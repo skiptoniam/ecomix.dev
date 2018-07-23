@@ -1,4 +1,4 @@
-#include"sam_bernoulli_sp_ints.h"
+#include"sam_cpp.h"
 
 sam_data::sam_data(){};
 sam_data::~sam_data(){};
@@ -33,7 +33,7 @@ bool sam_data::doOptiDisp() const{
 //"bernoulli_sp" = 1, "poisson" = 2, "ippm" = 3, "negative_binomial"=4, //Ignore these for now "tweedie","gaussian"
 
 bool sam_data::isDispersion() const{ // currently just check if negative binomial.
-	if( (disty == 4)))
+	if((disty == 4) | (disty == 5) | (disty == 6) )
 		return( true);
 	return( false);
 }

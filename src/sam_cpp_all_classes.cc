@@ -1,5 +1,5 @@
-//functions for sam_ippm_all_classes class
-#include"sam_ippm.h"
+//functions for sam_all_classes class
+#include"sam_cpp.h"
 
-sam_ippm_all_classes::sam_ippm_all_classes(){};
-sam_ippm_all_classes::~sam_ippm_all_classes(){};
+sam_cpp_all_classes::sam_cpp_all_classes(){};
+sam_cpp_all_classes::~sam_cpp_all_classes(){};

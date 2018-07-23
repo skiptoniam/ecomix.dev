@@ -1,9 +1,9 @@
-#include"sam_ippm.h"
+#include"sam_cpp.h"
 
 sam_derivs::sam_derivs(){};
 sam_derivs::~sam_derivs(){};
 
-void sam_derivs::setVals( const sam_ippm_data &dat, SEXP &RderivsAlpha, SEXP &RderivsBeta, SEXP &RderivsEta, SEXP &RderivsDisp, SEXP &RgetScores, SEXP &Rscores){
+void sam_derivs::setVals( const sam_data &dat, SEXP &RderivsAlpha, SEXP &RderivsBeta, SEXP &RderivsEta, SEXP &RderivsDisp, SEXP &RgetScores, SEXP &Rscores){
 	Alpha = REAL(RderivsAlpha);
 	Beta = REAL(RderivsBeta);
 	Eta = REAL(RderivsEta);
@@ -12,7 +12,7 @@ void sam_derivs::setVals( const sam_ippm_data &dat, SEXP &RderivsAlpha, SEXP &Rd
 	Scores = REAL(Rscores);
 }
 
-void sam_derivs::zeroDerivs( const sam_ippm_data &dat){
+void sam_derivs::zeroDerivs( const sam_data &dat){
 	
 	for( int i=0; i<(dat.nS); i++)
 		Alpha[i] = 0.0;
@@ -25,7 +25,7 @@ void sam_derivs::zeroDerivs( const sam_ippm_data &dat){
 			Disp[i] = 0.0;		
 }
 
-void sam_derivs::updateDerivs( const sam_ippm_data &dat, const vector<double> &alphaDerivs, const vector<double> &betaDerivs, const vector<double> &etaDerivs, const vector<double> &dispDerivs)
+void sam_derivs::updateDerivs( const sam_data &dat, const vector<double> &alphaDerivs, const vector<double> &betaDerivs, const vector<double> &etaDerivs, const vector<double> &dispDerivs)
 {
 	for(int s=0; s<(dat.nS); s++){
 			Alpha[s] = alphaDerivs.at(s);
@@ -62,7 +62,7 @@ void sam_derivs::updateDerivs( const sam_ippm_data &dat, const vector<double> &a
 
 }
 
-void sam_derivs::update( double *grArr, const sam_ippm_data &dat){
+void sam_derivs::update( double *grArr, const sam_data &dat){
 	int kount=0;
 	for( int i=0; i<dat.nS; i++){
 		Alpha[i] = grArr[kount];
@@ -84,7 +84,7 @@ void sam_derivs::update( double *grArr, const sam_ippm_data &dat){
 
 }
 
-void sam_derivs::getArray( double *grArr, const sam_ippm_data &dat){
+void sam_derivs::getArray( double *grArr, const sam_data &dat){
 	int kount=0;
 	for( int i=0; i<(dat.nS); i++){
 		grArr[kount] = Alpha[i];

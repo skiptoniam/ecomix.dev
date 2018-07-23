@@ -1,4 +1,4 @@
-#include"sam_ippm.h"
+#include"sam_cpp.h"
 
 sam_fits::sam_fits(){};
 sam_fits::~sam_fits(){};
@@ -15,7 +15,7 @@ void sam_fits::initialise( const int &nObs, const int &nG, const int &nS, const 
 	log_like_species_group_contrib.resize(nS*nG, NAnum);
 	
 	// array for catching dMu	
-	all_deriv_mus.resize(nObs*nS*nG, NAnum);
+	all_derivs_mu.resize(nObs*nS*nG, NAnum);
 	
 	// array for catching for dlogdalpha
 	dlogdalpha.resize(nS*nG, NAnum);
@@ -36,7 +36,7 @@ void sam_fits::zero(const int &NAnum){
 	allMus.assign(allMus.size(), NAnum);
 	log_like_species_contrib.assign(log_like_species_contrib.size(), NAnum);
 	log_like_species_group_contrib.assign(log_like_species_group_contrib.size(), NAnum);
-	all_deriv_mus.assign(all_deriv_mus.size(), NAnum);
+	all_derivs_mu.assign(all_derivs_mu.size(), NAnum);
 	dlogdalpha.assign(dlogdalpha.size(), NAnum);
 	dlogdbeta.assign(dlogdbeta.size(), NAnum);
 	dlogdpi.assign(dlogdpi.size(), NAnum);

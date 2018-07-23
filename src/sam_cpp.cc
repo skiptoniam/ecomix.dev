@@ -1,4 +1,4 @@
-#include"sam_ippm.h"
+#include"sam_cpp.h"
 
 /* Code for all SAMs distributions (except Tweedie).
  * I have tried to set this up like RCP, which makes more sense to me, in the future I can adapt Piers code into a single species_mix_cpp function.
@@ -12,16 +12,16 @@ extern "C" {
 							  SEXP Ralpha, SEXP Rbeta, SEXP Reta, SEXP Rdisp, 
 							  SEXP RderivsAlpha, SEXP RderivsBeta, SEXP RderivsEta, SEXP RderivsDisp, SEXP RgetScores, SEXP Rscores,
 							  SEXP Rpis, SEXP Rmus, SEXP RlogliS, SEXP RlogliSG,
-							  SEXP Rmaxit, SEXP Rtrace, SEXP RnReport, SEXP Rabstol, SEXP Rreltol, SEXP Rconv,
+							  SEXP Rmaxit, SEXP Rtrace, SEXP RnReport, SEXP Rabstol, SEXP Rreltol, SEXP Rconv, SEXP Rprintparams,
 							  SEXP Roptimise, SEXP RloglOnly, SEXP RderivsOnly, SEXP RoptiDisp){
 
 	sam_cpp_all_classes all;
 
 	//initialise the data structures -- they are mostly just pointers to REAL()s...
-	all.data.setVals(Ry, RX, Roffset, Rspp_wts, Rsite_spp_wts, Ry_not_na, RnS, RnG, Rp, RnObs, Rdisty);	//read in the data
+	all.data.setVals(Ry, RX, Roffset, Rspp_wts, Rsite_spp_wts, Ry_not_na, RnS, RnG, Rp, RnObs, Rdisty, RoptiDisp);	//read in the data
 	all.params.setVals(all.data, Ralpha, Rbeta, Reta, Rdisp);	//read in the parameters
 	all.derivs.setVals(all.data, RderivsAlpha, RderivsBeta, RderivsEta, RderivsDisp, RgetScores, Rscores);
-	all.contr.setVals( Rmaxit, Rtrace, RnReport, Rabstol, Rreltol, Rconv);
+	all.contr.setVals( Rmaxit, Rtrace, RnReport, Rabstol, Rreltol, Rconv, Rprintparams);
 	all.fits.initialise(all.data.nObs, all.data.nG, all.data.nS, all.data.nP, 0);
 
 	double logl = -999999;
@@ -39,7 +39,7 @@ extern "C" {
 	//bundling up things to return - will need to change these...
 	//first the fitted pis
 	//double *tmpPi = REAL( Reta);
-	//additive_logistic_ippm(all.fits.par_pis,1,all.data.nG);
+	//additive_logistic_sam(all.fits.par_pis,1,all.data.nG);
 	//for( int g=0; g<all.data.nG; g++)
 			//tmpPi[g] = all.fits.par_pis.at(g);
 	//the fitted expectations
@@ -77,6 +77,10 @@ extern "C" {
 	SEXP Reta_est =PROTECT(allocVector(REALSXP, all.data.nG-1));
 	for( int g=0; g<(all.data.nG-1);g++) REAL(Reta_est)[g] = all.params.Eta[g];
 	UNPROTECT(1);
+	SEXP Rdisp_est =PROTECT(allocVector(REALSXP, all.data.nS));
+	for( int s=0; s<(all.data.nS);s++) REAL(Rdisp_est)[s] = all.params.Disp[s];
+	UNPROTECT(1);
+	
 	
 	const char *names[] = {"logl", "alpha", "beta", "eta", "disp",""};                   /* note the null string */
 	SEXP Rres = PROTECT(mkNamed(VECSXP, names));  /* list of length 3 */
@@ -119,7 +123,7 @@ double SAM_optimise( sam_cpp_all_classes &all){
 	all.params.update( vmminParams, all.data);
 	gradient_function_sam(all.params.nTot, vmminParams, vmminGrad, &all);
 	all.derivs.update( vmminGrad, all.data);
-    all.params.printParms(all.data);
+    if(all.contr.printparams==1)all.params.printParms(all.data);
 
 	return(vmminLogl[0]);
 }
@@ -145,7 +149,7 @@ double sam_cpp_mix_loglike(const sam_data &dat, const sam_params &params, sam_fi
 	for(int g=0; g<(dat.nG-1); g++) par_pi.at(g) = params.Eta[g];
 
 	//transform additative pis to natural scale - need this to calc loglikes.	
-	additive_logistic_ippm(par_pi,1,dat.nG); // additive logistic transformation of pis.
+	additive_logistic_sam(par_pi,1,dat.nG); // additive logistic transformation of pis.
 
 	//calculate fitted values (constant over i)
 	calc_mu_fits(fits.allMus, params, dat);
@@ -219,20 +223,20 @@ void calc_sam_loglike_SG(vector<double> &loglSG, vector<double> &fits, const sam
 						loglSG.at(MATREF2D(g,s,dat.nG)) += log_ippm_sam(dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), dat.site_spp_wts[MATREF2D(i,s,dat.nObs)]);	
 						break;
 					case 4: // negative binomial
-						loglSG.at(MATREF2D(g,s,dat.nG)) += log_negative_binomial_sam(dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), parms.Disp[s]);	
+						loglSG.at(MATREF2D(g,s,dat.nG)) += log_negative_binomial_sam(dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), params.Disp[s]);	
 						break;
 					//if(dat.disty==5){ // tweedie
 						
 					//}
 					case 6: // normal
-						loglSG.at(MATREF2D(g,s,dat.nG)) += log_normal_sam(dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), parms.Disp[s]);	
+						loglSG.at(MATREF2D(g,s,dat.nG)) += log_normal_sam(dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), params.Disp[s]);	
 						break;
 						}
 					}	
 				}	
+			// This is for the bayesian bootstrap. For ippm this will be set to default of 1 in R as BB is to hard to do with ippms.
+			loglSG.at(MATREF2D(g,s,dat.nG)) = loglSG.at(MATREF2D(g,s,dat.nG))*dat.spp_wts[s]; //fix this up.
 			}
-		// This is for the bayesian bootstrap. For ippm this will be set to default of 1 in R as BB is to hard to do with ippms.
-		loglSG.at(MATREF2D(g,s,dat.nG)) = loglSG.at(MATREF2D(g,s,dat.nG))*dat.spp_wts[s]; //fix this up.
 		}
 	}
 
@@ -340,8 +344,8 @@ double log_negative_binomial_deriv_disp_sam(const double &y, const double &mu, c
     
     tmp = digamma( theta+y);
     tmp -= digamma( theta);
-    tmp += 1 + log(theta) - log(theta+fit);
-    tmp -= (theta+y)/(theta+fit);
+    tmp += 1 + log(theta) - log(theta+mu);
+    tmp -= (theta+y)/(theta+mu);
     
     return(tmp);
     }
@@ -390,13 +394,13 @@ double log_normal_deriv_mu_sam( const double &y, const double &mu, const double 
 	return( tmp);
 }
 
-double log_normal_deriv_disp_sam(const double &y, const double &fit, const double &sig){
-	double sig, res=0.0;
+double log_normal_deriv_disp_sam(const double &y, const double &mu, const double &sig){
+	double sig1, res=0.0;
 
-	sig = exp( dispParm);
-	res = (y-fit)*(y-fit) / (sig*sig*sig);
-	res -= 1/sig;
-	res *= sig; //for the change of variable dispParm --> sig
+	sig1 = exp(sig);
+	res = (y-mu)*(y-mu) / (sig1*sig1*sig1);
+	res -= 1/sig1;
+	res *= sig1; //for the change of variable dispParm --> sig
 
 	return( res);
 }
@@ -451,7 +455,7 @@ void sam_cpp_mix_gradient(const sam_data &dat, const sam_params &params, sam_der
 	vector<double> alphaDerivs(dat.nS, 0);//change to dat.NAN
 	vector<double> betaDerivs((dat.nG*dat.nP), 0);
 	vector<double> etaDerivs((dat.nG-1), 0); // check there should only be g pis
-	vector<double> dispDerivs(dat.nS, 0)
+	vector<double> dispDerivs(dat.nS, 0);
 	double logl;
 
     //calc loglike
@@ -461,7 +465,7 @@ void sam_cpp_mix_gradient(const sam_data &dat, const sam_params &params, sam_der
 	logl = sam_cpp_mix_loglike(dat, params, fits);
 	
 	for(int g=0; g<(dat.nG-1); g++) parpi.at(g) = params.Eta[g];
-	additive_logistic_ippm(parpi,1,dat.nG);
+	additive_logistic_sam(parpi,1,dat.nG);
 	
 	
 	// derivate w.r.t the mean and link
@@ -478,10 +482,10 @@ void sam_cpp_mix_gradient(const sam_data &dat, const sam_params &params, sam_der
 	
 	//derivate w.r.t dispersions
 	calc_dlog_ddispersionS(fits.dlogddispersion, fits.allMus, dat, params);
-	calc_dispersion_deriv(dispDerivs, fits.dlogddispersion, parpi, dat)	
+	calc_dispersion_deriv(dispDerivs, fits.dlogddispersion, fits.log_like_species_group_contrib, fits.log_like_species_contrib, parpi, dat);	
 	
 	//transform pis back to additative logistic scale to keep pi_dervis happy.
-	additive_logistic_ippm(parpi,0,dat.nG);
+	additive_logistic_sam(parpi,0,dat.nG);
 	
 	//derivate w.r.t pi/eta
 	calc_dlog_dpi(fits.dlogdpi, fits.log_like_species_group_contrib, fits.log_like_species_contrib, dat);
@@ -509,16 +513,16 @@ void calc_mu_deriv( vector<double> &mu_derivs, const vector<double> &fits, const
 					mu_derivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) = log_poisson_deriv_sam( dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)));
 					break;
 				case 3:
-					muDerives.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) = log_ippm_deriv_sam(dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), dat.site_spp_wts[MATREF2D(i,s,dat.nObs)]);
+					mu_derivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) = log_ippm_deriv_sam(dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), dat.site_spp_wts[MATREF2D(i,s,dat.nObs)]);
 					break;
 				case 4:
-					mu_derivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) = log_negative_binomial_deriv_sam( dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), params.Disp[s]);
+					mu_derivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) = log_negative_binomial_deriv_mu_sam( dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), params.Disp[s]);
 					break;
 				//case 5:
-				 	//mu_derivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) = log_tweedie_deriv_sam( dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), exp( parms.Disp[s]), parms.Power[s]);
+				 	//mu_derivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) = log_tweedie_deriv_sam( dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), exp( params.Disp[s]), params.Power[s]);
 				 	//break;
 				case 6:
-					mu_derivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) = log_normal_deriv_sam dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), params.Disp[s]);
+					mu_derivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) = log_normal_deriv_mu_sam(dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), params.Disp[s]);
 					break;
 				}	
 			}
@@ -588,8 +592,7 @@ void calc_dlog_dbeta(vector<double> &dldb, vector<double> const &mu_eta_derivs, 
 				if(dat.y_not_na[MATREF2D(i,s,dat.nObs)]>0){
 					//tmp_lpd = log_ippm_deriv_sam(dat.y[MATREF2D(i,s,dat.nObs)], mus.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), dat.st_sp_wts[MATREF2D(i,s,dat.nObs)]);
 						for(int j=0; j<dat.nP; j++){
-							dldb.at(MATREF3D(g,j,s,dat.nG,dat.nP)) += mu_eta_derivs.at(MATREF2D(g,s,dat.nG)) * dat.X[MATREF2D(i,j,dat.nObs)]);
-					}
+							dldb.at(MATREF3D(g,j,s,dat.nG,dat.nP)) += mu_eta_derivs.at(MATREF2D(g,s,dat.nG)) * dat.X[MATREF2D(i,j,dat.nObs)];					}
 				}
 			}
 		for(int j=0; j<dat.nP; j++){
@@ -616,7 +619,7 @@ void calc_dlog_ddispersionS(vector<double> &dldd, vector<double> const &mus, con
 						//dldd.at(MATREF2D(g,s,dat.nG)) += log_tweedie_deriv_disp_sam(dat.y[MATREF2D(i,s,dat.nObs)], mus.at( MATREF3D(i,s,g,dat.nObs, dat.nS)), params.Disp[s]);
 						//break;	
 					case 6: // normal
-						dldd.at(MATREF2D(g,s,dat.nG)) += log_normal_deriv_sam(dat.y[MATREF2D(i,s,dat.nObs)], mus.at( MATREF3D(i,s,g,dat.nObs, dat.nS)), params.Disp[s]);
+						dldd.at(MATREF2D(g,s,dat.nG)) += log_normal_deriv_disp_sam(dat.y[MATREF2D(i,s,dat.nObs)], mus.at( MATREF3D(i,s,g,dat.nObs, dat.nS)), params.Disp[s]);
 						break;
 						}
 			}

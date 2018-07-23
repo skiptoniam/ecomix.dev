@@ -1,4 +1,4 @@
-#include"sam_ippm.h"
+#include"sam_cpp.h"
 
 sam_params::sam_params(){};
 sam_params::~sam_params(){};
