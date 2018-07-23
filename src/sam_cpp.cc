@@ -467,7 +467,6 @@ void sam_cpp_mix_gradient(const sam_data &dat, const sam_params &params, sam_der
 	for(int g=0; g<(dat.nG-1); g++) parpi.at(g) = params.Eta[g];
 	additive_logistic_sam(parpi,1,dat.nG);
 	
-	
 	// derivate w.r.t the mean and link
 	calc_mu_deriv(fits.all_derivs_mu, fits.allMus, dat, params);
 	calc_eta_mu_deriv(eta_mu_derivs, dat, fits.all_derivs_mu, fits.allMus);
@@ -481,9 +480,11 @@ void sam_cpp_mix_gradient(const sam_data &dat, const sam_params &params, sam_der
 	calc_beta_deriv(betaDerivs, fits.dlogdbeta, fits.log_like_species_group_contrib, fits.log_like_species_contrib, parpi, dat);
 	
 	//derivate w.r.t dispersions
+	if( !dat.isDispersion()){ // if no disperion?  move along please 
 	calc_dlog_ddispersionS(fits.dlogddispersion, fits.allMus, dat, params);
 	calc_dispersion_deriv(dispDerivs, fits.dlogddispersion, fits.log_like_species_group_contrib, fits.log_like_species_contrib, parpi, dat);	
-	
+    }
+        
 	//transform pis back to additative logistic scale to keep pi_dervis happy.
 	additive_logistic_sam(parpi,0,dat.nG);
 	
