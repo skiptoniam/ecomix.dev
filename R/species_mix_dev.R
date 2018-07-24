@@ -52,6 +52,7 @@ sam_optimise <- function(y, X, offset, spp_wts, site_spp_wts, y_is_na, nS, nG, n
                PACKAGE = "ecomix.dev")
 
   ret <- tmp
+  ret$logl <- ret$logl * -1
   ret$mus <- array(mus, dim=c(n, S, G))
   ret$scores <- list(alpha.scores = alpha.score, beta.scores = beta.score, eta.scores=eta.score, disp.scores=disp.score)
   ret$S <- S; ret$G <- G; ret$np <- np; ret$n <- n;
