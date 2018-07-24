@@ -1,2 +1,2 @@
 # ecomix.dev
-Development of ecomix package 
+Development of new code for ecomix package 
