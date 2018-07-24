@@ -177,32 +177,29 @@ void calc_mu_fits(vector<double> &fits, const sam_params &params, const sam_data
 		for( int s=0; s<dat.nS; s++){
 			lps.at(MATREF2D(g,s,dat.nG)) = params.Alpha[s]; 
 			for( int i=0; i<dat.nObs; i++){
+				//std::cout << g << ' '<< s << ' '<<  i <<'\n'<<'\n';
+				//Rprintf( " %i\n", dat.y_not_na[MATREF2D(i,s,dat.nObs)]); 
 				// need logical flag which deals with NA data.
 				if(dat.y_not_na[MATREF2D(i,s,dat.nObs)]>0){
 				lp = lps.at(MATREF2D(g,s,dat.nG)) + dat.offset[i];
 					for( int j=0;j<dat.nP; j++){
-						lp += params.Beta[MATREF2D(g,j,(dat.nG))] * dat.X[MATREF2D(i,j,dat.nObs)];
-				   	}
-				
-				switch(dat.disty){
-					case 1://bernoulli
-						fits.at( MATREF3D(i,s,g,dat.nObs,dat.nS)) = inverse_logit(lp);
-						break;					
-					case 2://poisson
-					case 3://ippm
-					case 4://negative binomial
-					case 5://tweedie
-						fits.at( MATREF3D(i,s,g,dat.nObs,dat.nS)) = exp(lp);
-					case 6://normal
-						fits.at( MATREF3D(i,s,g,dat.nObs,dat.nS)) = lp;
-						break;
-					}
+							lp += params.Beta[MATREF2D(g,j,(dat.nG))] * dat.X[MATREF2D(i,j,dat.nObs)];
+						}
+					if(dat.disty==1){//bernoulli
+							fits.at( MATREF3D(i,s,g,dat.nObs,dat.nS)) = inverse_logit(lp);
+						}							
+					if(dat.disty==2 | dat.disty==3 | dat.disty==4 | dat.disty==5){//poisson, ippm, negative binomial, tweedie
+							fits.at( MATREF3D(i,s,g,dat.nObs,dat.nS)) = exp(lp);
+						}
+					if(dat.disty==6){//normal
+							fits.at( MATREF3D(i,s,g,dat.nObs,dat.nS)) = lp;
+					}		
 				}
 			}
 		}
 	}
-
 }
+
 
 
 void calc_sam_loglike_SG(vector<double> &loglSG, vector<double> &fits, const sam_data &dat, const sam_params &params){
@@ -212,26 +209,25 @@ void calc_sam_loglike_SG(vector<double> &loglSG, vector<double> &fits, const sam
 		for( int g=0; g<dat.nG; g++){
 			for(int i=0; i<dat.nObs; i++){
 				if(dat.y_not_na[MATREF2D(i,s,dat.nObs)]>0){
-					switch(dat.disty){
-					case 1: // bernoulli
+					if(dat.disty==1){ // bernoulli
 						loglSG.at(MATREF2D(g,s,dat.nG)) += log_bernoulli_sam(dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)));
-						break;	
-					case 2: // poisson
+						}
+					if(dat.disty==2){ // poisson
 						loglSG.at(MATREF2D(g,s,dat.nG)) += log_poisson_sam(dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)));
-						break;
-					case 3: // ippm
+						}
+					if(dat.disty==3){ // ippm
 						loglSG.at(MATREF2D(g,s,dat.nG)) += log_ippm_sam(dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), dat.site_spp_wts[MATREF2D(i,s,dat.nObs)]);	
-						break;
-					case 4: // negative binomial
+						}
+					if(dat.disty==4){ // negative binomial
 						loglSG.at(MATREF2D(g,s,dat.nG)) += log_negative_binomial_sam(dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), params.Disp[s]);	
-						break;
+						}
 					//if(dat.disty==5){ // tweedie
 						
 					//}
-					case 6: // normal
+					if(dat.disty==6){ // normal
 						loglSG.at(MATREF2D(g,s,dat.nG)) += log_normal_sam(dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), params.Disp[s]);	
-						break;
 						}
+						
 					}	
 				}	
 			// This is for the bayesian bootstrap. For ippm this will be set to default of 1 in R as BB is to hard to do with ippms.
@@ -285,15 +281,6 @@ double log_bernoulli_deriv_sam(const double &y, const double &mu){
 	}
 	return( log( negOne));	//to give an error
 }
-
-//double dmu_deta_bernoulli(const double &mu){
-	
-	//double tmp;
-	//tmp = mu;
-	//tmp *= (1-mu);
-	//return(tmp);
-	
-//}
 
 double log_poisson_sam( const double &y, const double &mu){
 	double tmp;
@@ -451,7 +438,7 @@ void gradient_function_sam(int n, double *par, double *gr, void *ex){
 void sam_cpp_mix_gradient(const sam_data &dat, const sam_params &params, sam_derivs &derivs, sam_fits &fits){
 
 	vector<double> parpi((dat.nG-1), 0);
-	vector<double> eta_mu_derivs((dat.nS*dat.nG), 0);
+	vector<double> eta_mu_derivs((dat.nS*dat.nG*dat.nObs), 0);
 	vector<double> alphaDerivs(dat.nS, 0);//change to dat.NAN
 	vector<double> betaDerivs((dat.nG*dat.nP), 0);
 	vector<double> etaDerivs((dat.nG-1), 0); // check there should only be g pis
@@ -472,17 +459,17 @@ void sam_cpp_mix_gradient(const sam_data &dat, const sam_params &params, sam_der
 	calc_eta_mu_deriv(eta_mu_derivs, dat, fits.all_derivs_mu, fits.allMus);
 		
 	//derivate w.r.t alpha
-   	calc_dlog_dalpha(fits.dlogdalpha, fits.allMus, dat);
+   	calc_dlog_dalpha(fits.dlogdalpha, eta_mu_derivs, dat);
 	calc_alpha_deriv(alphaDerivs, fits.dlogdalpha, fits.log_like_species_group_contrib, fits.log_like_species_contrib, parpi, dat);
 
 	//derivate w.r.t beta
-	calc_dlog_dbeta(fits.dlogdbeta, fits.allMus, dat);
+	calc_dlog_dbeta(fits.dlogdbeta, eta_mu_derivs, dat);
 	calc_beta_deriv(betaDerivs, fits.dlogdbeta, fits.log_like_species_group_contrib, fits.log_like_species_contrib, parpi, dat);
 	
 	//derivate w.r.t dispersions
-	if( !dat.isDispersion()){ // if no disperion?  move along please 
-	calc_dlog_ddispersionS(fits.dlogddispersion, fits.allMus, dat, params);
-	calc_dispersion_deriv(dispDerivs, fits.dlogddispersion, fits.log_like_species_group_contrib, fits.log_like_species_contrib, parpi, dat);	
+	if( dat.isDispersion()){ // if no disperion?  move along please 
+		calc_dlog_ddispersionS(fits.dlogddispersion, fits.allMus, dat, params);
+		calc_dispersion_deriv(dispDerivs, fits.dlogddispersion, fits.log_like_species_group_contrib, fits.log_like_species_contrib, parpi, dat);	
     }
         
 	//transform pis back to additative logistic scale to keep pi_dervis happy.
@@ -506,26 +493,26 @@ void calc_mu_deriv( vector<double> &mu_derivs, const vector<double> &fits, const
 	for( int g=0; g<dat.nG; g++){
 		for( int s=0; s<dat.nS; s++){
 			for(int i=0; i<dat.nObs; i++){
-			switch( dat.disty){
-				case 1:
+			//switch( dat.disty){
+				if(dat.disty==1){
 					mu_derivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) = log_bernoulli_deriv_sam( dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)));
-					break;
-				case 2:
+				}
+				if(dat.disty==2){
 					mu_derivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) = log_poisson_deriv_sam( dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)));
-					break;
-				case 3:
+				}
+				if(dat.disty==3){
 					mu_derivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) = log_ippm_deriv_sam(dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), dat.site_spp_wts[MATREF2D(i,s,dat.nObs)]);
-					break;
-				case 4:
+				}
+				if(dat.disty==4){
 					mu_derivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) = log_negative_binomial_deriv_mu_sam( dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), params.Disp[s]);
-					break;
-				//case 5:
+				}
+				//if(dat.disty==5){
 				 	//mu_derivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) = log_tweedie_deriv_sam( dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), exp( params.Disp[s]), params.Power[s]);
-				 	//break;
-				case 6:
+				//}
+				if(dat.disty==6){
 					mu_derivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) = log_normal_deriv_mu_sam(dat.y[MATREF2D(i,s,dat.nObs)], fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), params.Disp[s]);
-					break;
-				}	
+				}
+				//}	
 			}
 		}
 	}
@@ -537,21 +524,18 @@ void calc_eta_mu_deriv( vector<double> &etaDerivs, const sam_data &dat, const ve
 		for( int s=0; s<dat.nS; s++){
 			for(int i=0; i<dat.nObs; i++){
 				if(dat.y_not_na[MATREF2D(i,s,dat.nObs)]>0){
-					switch( dat.disty){
-						case 1: //bernoulli
-							etaDerivs.at(MATREF2D(g,s,dat.nG)) += fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) * (1-fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS))) * muDerivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS));	//logit link
-							break;
-						case 3: // ippm
-							etaDerivs.at(MATREF2D(g,s,dat.nG)) += dat.site_spp_wts[MATREF2D(i,s,dat.nObs)] * fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) * muDerivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)); // loglink + weights	
-						case 2: // poisson
-						case 4: // negative binomial
-						//case 5: // tweedie
-							etaDerivs.at(MATREF2D(g,s,dat.nG)) += fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) * muDerivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS));	//log link
-							break;
-						case 6: // normal 
-							etaDerivs.at(MATREF2D(g,s,dat.nG)) += muDerivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS));	//identity link
-							break;
-					}	
+						if(dat.disty==1){ //bernoulli
+							etaDerivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) = fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) * (1-fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS))) * muDerivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS));	//logit link
+						}
+						if(dat.disty==3){ // ippm
+							etaDerivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) = dat.site_spp_wts[MATREF2D(i,s,dat.nObs)] * fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) * muDerivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)); // loglink + weights	
+						}
+						if(dat.disty==2 | dat.disty==4 | dat.disty==4){ // poisson, negative binomial, tweedie
+							etaDerivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) = fits.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) * muDerivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS));	//log link
+						}
+						if(dat.disty==6){ // normal 
+							etaDerivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) = muDerivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS));	//identity link
+						}	
 				}
 			}
 		}
@@ -564,18 +548,18 @@ void calc_dlog_dalpha(vector<double> &dlda, vector<double> const &mu_eta_derivs,
 
 	// dlda = dlogalpha passed as fits.dflogdalpha(dat.nG*dat.nS, dat.NAnum) from function call
 	// mus = all the fitted values.
-	double tmp_lpd;
+	//double tmp_lpd;
 
 	for(int g=0; g<dat.nG; g++){
 		for(int s=0;s<dat.nS; s++){
-			//for(int i=0; i<dat.nObs; i++){
-				//if(dat.y_not_na[MATREF2D(i,s,dat.nObs)]>0){
+			for(int i=0; i<dat.nObs; i++){
+			  if(dat.y_not_na[MATREF2D(i,s,dat.nObs)]>0){
 					// this is the tmp log poisson derivative (lpd)
 					//tmp_lpd = log_ippm_deriv_sam(dat.y[MATREF2D(i,s,dat.nObs)], mus.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), dat.st_sp_wts[MATREF2D(i,s,dat.nObs)]);
-					dlda.at(MATREF2D(g,s,dat.nG)) =	mu_eta_derivs.at(MATREF2D(g,s,dat.nG))*dat.spp_wts[s];//this is for the BB
-				//}
-			//}
-			//dlda.at(MATREF2D(g,s,dat.nG)) = dlda.at(MATREF2D(g,s,dat.nG))*dat.wts[s]; //this is for the BB weights
+					dlda.at(MATREF2D(g,s,dat.nG)) += mu_eta_derivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS));//this is for the BB
+				}
+			}
+			dlda.at(MATREF2D(g,s,dat.nG)) = dlda.at(MATREF2D(g,s,dat.nG))*dat.spp_wts[s]; //this is for the BB weights
 		}
 	}
 }
@@ -593,11 +577,14 @@ void calc_dlog_dbeta(vector<double> &dldb, vector<double> const &mu_eta_derivs, 
 				if(dat.y_not_na[MATREF2D(i,s,dat.nObs)]>0){
 					//tmp_lpd = log_ippm_deriv_sam(dat.y[MATREF2D(i,s,dat.nObs)], mus.at(MATREF3D(i,s,g,dat.nObs,dat.nS)), dat.st_sp_wts[MATREF2D(i,s,dat.nObs)]);
 						for(int j=0; j<dat.nP; j++){
-							dldb.at(MATREF3D(g,j,s,dat.nG,dat.nP)) += mu_eta_derivs.at(MATREF2D(g,s,dat.nG)) * dat.X[MATREF2D(i,j,dat.nObs)];					}
+							dldb.at(MATREF3D(g,j,s,dat.nG,dat.nP)) += mu_eta_derivs.at(MATREF3D(i,s,g,dat.nObs,dat.nS)) * dat.X[MATREF2D(i,j,dat.nObs)];
+							//std::cout << dldb.at(MATREF3D(g,j,s,dat.nG,dat.nP)) << '\n';
+							}
 				}
 			}
 		for(int j=0; j<dat.nP; j++){
-				dldb.at(MATREF3D(g,j,s,dat.nG,dat.nP)) = dldb.at(MATREF3D(g,j,s,dat.nG,dat.nP))*dat.spp_wts[s];	
+				dldb.at(MATREF3D(g,j,s,dat.nG,dat.nP)) = dldb.at(MATREF3D(g,j,s,dat.nG,dat.nP))*dat.spp_wts[s];
+				//std::cout << dldb.at(MATREF3D(g,j,s,dat.nG,dat.nP)) << '\n';	
 			}
 		}
 	}
@@ -612,17 +599,17 @@ void calc_dlog_ddispersionS(vector<double> &dldd, vector<double> const &mus, con
 	for(int g=0; g<dat.nG; g++){
 		for(int s=0;s<dat.nS; s++){
 			for(int i=0; i<dat.nObs; i++){
-				switch(dat.disty){
-					case 4: // negative binomial
+				//switch(dat.disty){
+					if(dat.disty==4){ // negative binomial
 						dldd.at(MATREF2D(g,s,dat.nG)) += log_negative_binomial_deriv_disp_sam(dat.y[MATREF2D(i,s,dat.nObs)], mus.at( MATREF3D(i,s,g,dat.nObs, dat.nS)), params.Disp[s]);
-						break;
+					}
 					//case 5:	// tweedie
 						//dldd.at(MATREF2D(g,s,dat.nG)) += log_tweedie_deriv_disp_sam(dat.y[MATREF2D(i,s,dat.nObs)], mus.at( MATREF3D(i,s,g,dat.nObs, dat.nS)), params.Disp[s]);
 						//break;	
-					case 6: // normal
+					if(dat.disty==6){ // normal
 						dldd.at(MATREF2D(g,s,dat.nG)) += log_normal_deriv_disp_sam(dat.y[MATREF2D(i,s,dat.nObs)], mus.at( MATREF3D(i,s,g,dat.nObs, dat.nS)), params.Disp[s]);
-						break;
-						}
+					}
+						//}
 			}
 		dldd.at(MATREF2D(g,s,dat.nG)) = dldd.at(MATREF2D(g,s,dat.nG))*dat.spp_wts[s];
 		}

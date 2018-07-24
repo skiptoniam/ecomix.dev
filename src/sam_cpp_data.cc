@@ -3,7 +3,7 @@
 sam_data::sam_data(){};
 sam_data::~sam_data(){};
 
-void sam_data::setVals( SEXP &Ry, SEXP &RX, SEXP &Roffset, SEXP &Rspp_wts, SEXP &Rsite_spp_wts, SEXP &y_not_na,
+void sam_data::setVals( SEXP &Ry, SEXP &RX, SEXP &Roffset, SEXP &Rspp_wts, SEXP &Rsite_spp_wts, SEXP &Ry_not_na,
                              SEXP &RS, SEXP &RG, SEXP &Rp, SEXP &RnObs, SEXP &Rdisty, SEXP &RoptiDisp){
 
 	nS = *(INTEGER( RS));
@@ -19,6 +19,7 @@ void sam_data::setVals( SEXP &Ry, SEXP &RX, SEXP &Roffset, SEXP &Rspp_wts, SEXP 
 	offset = REAL( Roffset);
 	spp_wts = REAL( Rspp_wts); // this is for the bayesian bootstrap
 	site_spp_wts = REAL( Rsite_spp_wts); //this is for the ippm
+	y_not_na = INTEGER(Ry_not_na);
 	
 
 }

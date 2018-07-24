@@ -3,6 +3,7 @@
 NULL
 
 ## need to put disps in the starting vals even if NULL.
+#'@export
 
 sam_optimise <- function(y, X, offset, spp_wts, site_spp_wts, y_is_na, nS, nG, nObs, disty, start_vals, control) {
 
@@ -33,7 +34,7 @@ sam_optimise <- function(y, X, offset, spp_wts, site_spp_wts, y_is_na, nS, nG, n
   #c++ call to optimise the model (needs pretty good starting values)
   tmp <- .Call("species_mix_cpp",
                as.numeric(as.matrix(y)), as.numeric(as.matrix(X[,-1])), as.numeric(offset), as.numeric(spp_wts),
-               as.numeric(as.matrix(site_spp_wts)), as.integer(!y_is_na),
+               as.numeric(as.matrix(site_spp_wts)), as.integer(as.matrix(!y_is_na)),
                # SEXP Ry, SEXP RX, SEXP Roffset, SEXP Rspp_wts, SEXP Rsite_spp_wts, SEXP Ry_not_na, // data
                as.integer(nS), as.integer(nG), as.integer(np), as.integer(nObs), as.integer(disty),
                # SEXP RnS, SEXP RnG, SEXP Rp, SEXP RnObs, SEXP Rdisty, //data
